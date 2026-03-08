@@ -10,6 +10,12 @@
 class PluginProcessor : public juce::AudioProcessor
 {
 public:
+    enum class Waveform
+    {
+        sine = 0,
+        saw
+    };
+
     PluginProcessor();
     ~PluginProcessor() override;
 
@@ -39,8 +45,19 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    void setFrequency (float newFrequency);
+    void setGain (float newGain);
+    void setWaveform (Waveform newWaveform);
+
+    float getFrequency() const;
+    float getGain() const;
+    Waveform getWaveform() const;
+
 private:
     Oscillator oscillator;
+    float frequency = 220.0f;
+    float gain = 0.15f;
+    Waveform waveform = Waveform::saw;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };

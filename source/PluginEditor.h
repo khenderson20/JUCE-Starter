@@ -16,10 +16,18 @@ public:
     void resized() override;
 
 private:
-    // This reference is provided as a quick way for your editor to
-    // access the processor object that created it.
+    void drawWaveformPreview (juce::Graphics& g, juce::Rectangle<int> area);
+
     PluginProcessor& processorRef;
     std::unique_ptr<melatonin::Inspector> inspector;
     juce::TextButton inspectButton { "Inspect the UI" };
+
+    juce::Slider frequencySlider;
+    juce::Slider gainSlider;
+    juce::Label frequencyLabel;
+    juce::Label gainLabel;
+    juce::ComboBox waveformBox;
+    juce::Label waveformLabel;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginEditor)
 };

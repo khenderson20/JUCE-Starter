@@ -88,8 +88,8 @@ void PluginProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     juce::ignoreUnused (samplesPerBlock);
 
     oscillator.prepare (sampleRate);
-    oscillator.setFrequency (220.0f);
-    oscillator.setGain (0.15f);
+    oscillator.setFrequency (frequency);
+    oscillator.setGain (gain);
 }
 
 void PluginProcessor::releaseResources()
@@ -128,11 +128,54 @@ void PluginProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Midi
 
     for (int sampleIndex = 0; sampleIndex < numSamples; ++sampleIndex)
     {
-        const float outputSample = oscillator.getNextSawSample();
+        float outputSample = 0.0f;
+
+        switch (waveform)
+        {
+            case Waveform::sine:
+                outputSample = oscillator.getNextSineSample();
+                break;
+
+            case Waveform::saw:
+                outputSample = oscillator.getNextSawSample();
+                break;
+        }
 
         for (int channel = 0; channel < numChannels; ++channel)
             buffer.setSample (channel, sampleIndex, outputSample);
     }
+}
+
+void PluginProcessor::setFrequency (float newFrequency)
+{
+    frequency = juce::jmax (0.0f, newFrequency);
+    oscillator.setFrequency (frequency);
+}
+
+void PluginProcessor::setGain (float newGain)
+{
+    gain = juce::jlimit (0.0f, 1.0f, newGain);
+    oscillator.setGain (gain);
+}
+
+void PluginProcessor::setWaveform (Waveform newWaveform)
+{
+    waveform = newWaveform;
+}
+
+float PluginProcessor::getFrequency() const
+{
+    return frequency;
+}
+
+float PluginProcessor::getGain() const
+{
+    return gain;
+}
+
+PluginProcessor::Waveform PluginProcessor::getWaveform() const
+{
+    return waveform;
 }
 
 //==============================================================================
