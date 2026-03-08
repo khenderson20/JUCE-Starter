@@ -1,6 +1,7 @@
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
+#include "Oscillator.h"
 
 #if (MSVC)
 #include "ipps.h"
@@ -39,5 +40,7 @@ public:
     void setStateInformation (const void* data, int sizeInBytes) override;
 
 private:
+    Oscillator oscillator;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)
 };

@@ -35,7 +35,7 @@ set(BUNDLE_ID "com.pamplejuce.pamplejuce")
 
 # Change me! Set the plugin formats you want built
 # Valid choices: AAX Unity VST VST3 AU AUv3 Standalone
-set(FORMATS Standalone AU VST3 AUv3)
+set(FORMATS Standalone VST3)
 
 # Force JUCE to work with sccache
 # instruct MSVC to embed debug info (/Z7) instead of emitting a .pdb
@@ -91,7 +91,9 @@ juce_add_plugin("${PROJECT_NAME}"
 
 # This lets us use our code in both the JUCE targets and our Test target
 # Without running into ODR violations
-add_library(SharedCode INTERFACE)
+add_library(SharedCode INTERFACE
+        source/Oscillator.h
+        source/Oscillator.cpp)
 
 clap_juce_extensions_plugin(TARGET "${PROJECT_NAME}"
     CLAP_ID "${BUNDLE_ID}"
