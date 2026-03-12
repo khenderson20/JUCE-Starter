@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <juce_audio_basics/juce_audio_basics.h>
+
 class Oscillator
 {
 public:
@@ -18,5 +20,5 @@ private:
     double sampleRate = 44100.0;
     float phase = 0.0f;
     float frequency = 220.0f;
-    float gain = 0.15f;
+    juce::SmoothedValue<float> gain { 0.05f };
 };

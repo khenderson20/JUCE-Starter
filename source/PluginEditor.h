@@ -16,7 +16,16 @@ public:
     void resized() override;
 
 private:
-    void drawWaveformPreview (juce::Graphics& g, juce::Rectangle<int> area);
+    void setupSlider (juce::Slider& slider, juce::Label& label,
+        const juce::String& name, double min, double max,
+        double step, double initialValue,
+        std::function<void()> onChange,
+        double skewMidPoint = 0.0);
+
+    void drawWaveformPreview (juce::Graphics& g, juce::Rectangle<int> area) const;
+    static void drawWaveformBackground (juce::Graphics& g, juce::Rectangle<int> area);
+    juce::Path buildWaveformPath (juce::Rectangle<int> area, float amplitude) const;
+    void drawWaveformInfoText (juce::Graphics& g, juce::Rectangle<int> area) const;
 
     PluginProcessor& processorRef;
     std::unique_ptr<melatonin::Inspector> inspector;

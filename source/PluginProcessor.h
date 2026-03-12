@@ -56,7 +56,7 @@ public:
 private:
     Oscillator oscillator;
     float frequency = 220.0f;
-    float gain = 0.15f;
+    float gain = 0.05f;
     Waveform waveform = Waveform::saw;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginProcessor)

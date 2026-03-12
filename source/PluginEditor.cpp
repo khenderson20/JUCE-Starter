@@ -2,6 +2,29 @@
 
 #include <cmath>
 
+void PluginEditor::setupSlider (juce::Slider& slider,
+    juce::Label& label,
+    const juce::String& name,
+    double min, double max, double step, double initialValue,
+    std::function<void()> onChange,
+    double skewMidPoint)
+{
+    label.setText (name, juce::dontSendNotification);
+    label.attachToComponent (&slider, true);
+    addAndMakeVisible (label);
+
+    slider.setSliderStyle (juce::Slider::LinearHorizontal);
+    slider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 80, 24);
+    slider.setRange (min, max, step);
+
+    if (skewMidPoint > 0.0)
+        slider.setSkewFactorFromMidPoint (skewMidPoint);
+
+    slider.setValue (initialValue);
+    slider.onValueChange = std::move (onChange);
+    addAndMakeVisible (slider);
+}
+
 PluginEditor::PluginEditor (PluginProcessor& p)
     : AudioProcessorEditor (&p), processorRef (p)
 {
@@ -18,37 +41,18 @@ PluginEditor::PluginEditor (PluginProcessor& p)
         inspector->setVisible (true);
     };
 
-    frequencyLabel.setText ("Frequency", juce::dontSendNotification);
-    frequencyLabel.attachToComponent (&frequencySlider, false);
-    addAndMakeVisible (frequencyLabel);
+    // --- Frequency slider ---
+    setupSlider (frequencySlider, frequencyLabel, "Frequency",
+                 20.0, 2000.0, 0.01, processorRef.getFrequency(),
+                 [this] { processorRef.setFrequency (static_cast<float> (frequencySlider.getValue())); repaint(); },
+                 220.0);
 
-    frequencySlider.setSliderStyle (juce::Slider::LinearHorizontal);
-    frequencySlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 80, 24);
-    frequencySlider.setRange (20.0, 2000.0, 0.01);
-    frequencySlider.setSkewFactorFromMidPoint (220.0);
-    frequencySlider.setValue (processorRef.getFrequency());
-    frequencySlider.onValueChange = [this]
-    {
-        processorRef.setFrequency (static_cast<float> (frequencySlider.getValue()));
-        repaint();
-    };
-    addAndMakeVisible (frequencySlider);
+    // --- Gain slider ---
+    setupSlider (gainSlider, gainLabel, "Gain",
+                 0.0, 1.0, 0.001, processorRef.getGain(),
+                 [this] { processorRef.setGain (static_cast<float> (gainSlider.getValue())); repaint(); });
 
-    gainLabel.setText ("Gain", juce::dontSendNotification);
-    gainLabel.attachToComponent (&gainSlider, false);
-    addAndMakeVisible (gainLabel);
-
-    gainSlider.setSliderStyle (juce::Slider::LinearHorizontal);
-    gainSlider.setTextBoxStyle (juce::Slider::TextBoxRight, false, 80, 24);
-    gainSlider.setRange (0.0, 1.0, 0.001);
-    gainSlider.setValue (processorRef.getGain());
-    gainSlider.onValueChange = [this]
-    {
-        processorRef.setGain (static_cast<float> (gainSlider.getValue()));
-        repaint();
-    };
-    addAndMakeVisible (gainSlider);
-
+    // --- Waveform selector ---
     waveformLabel.setText ("Waveform", juce::dontSendNotification);
     addAndMakeVisible (waveformLabel);
 
@@ -57,11 +61,9 @@ PluginEditor::PluginEditor (PluginProcessor& p)
     waveformBox.setSelectedId (processorRef.getWaveform() == PluginProcessor::Waveform::sine ? 1 : 2);
     waveformBox.onChange = [this]
     {
-        const auto selectedWaveform = waveformBox.getSelectedId() == 1
+        processorRef.setWaveform (waveformBox.getSelectedId() == 1
             ? PluginProcessor::Waveform::sine
-            : PluginProcessor::Waveform::saw;
-
-        processorRef.setWaveform (selectedWaveform);
+            : PluginProcessor::Waveform::saw);
         repaint();
     };
     addAndMakeVisible (waveformBox);
@@ -70,8 +72,7 @@ PluginEditor::PluginEditor (PluginProcessor& p)
 }
 
 PluginEditor::~PluginEditor()
-{
-}
+= default;
 
 void PluginEditor::paint (juce::Graphics& g)
 {
@@ -120,26 +121,27 @@ void PluginEditor::resized()
     inspectButton.setBounds (getLocalBounds().reduced (16).removeFromBottom (40).removeFromRight (140));
 }
 
-void PluginEditor::drawWaveformPreview (juce::Graphics& g, juce::Rectangle<int> area)
+void PluginEditor::drawWaveformBackground (juce::Graphics& g, const juce::Rectangle<int> area)
 {
+    const auto areaF = area.toFloat();
+
     g.setColour (juce::Colour (0xff2a2a2a));
-    g.fillRoundedRectangle (area.toFloat(), 8.0f);
+    g.fillRoundedRectangle (areaF, 8.0f);
 
     g.setColour (juce::Colour (0xff404040));
-    g.drawRoundedRectangle (area.toFloat(), 8.0f, 1.0f);
-
-    const auto left = static_cast<float> (area.getX());
-    const auto right = static_cast<float> (area.getRight());
-    const auto top = static_cast<float> (area.getY());
-    const auto bottom = static_cast<float> (area.getBottom());
-    const auto width = static_cast<float> (area.getWidth());
-    const auto centreY = static_cast<float> (area.getCentreY());
-    const auto amplitude = static_cast<float> (area.getHeight()) * 0.35f * processorRef.getGain();
+    g.drawRoundedRectangle (areaF, 8.0f, 1.0f);
 
     g.setColour (juce::Colour (0xff555555));
-    g.drawHorizontalLine (area.getCentreY(), left, right);
+    g.drawHorizontalLine (area.getCentreY(),
+        static_cast<float> (area.getX()),
+        static_cast<float> (area.getRight()));
+}
 
+juce::Path PluginEditor::buildWaveformPath (const juce::Rectangle<int> area, float amplitude) const
+{
     juce::Path path;
+    const auto width = static_cast<float> (area.getWidth());
+    const auto centreY = static_cast<float> (area.getCentreY());
 
     for (int x = 0; x < area.getWidth(); ++x)
     {
@@ -158,7 +160,7 @@ void PluginEditor::drawWaveformPreview (juce::Graphics& g, juce::Rectangle<int> 
         }
 
         const float y = centreY - (sample * amplitude);
-        const float drawX = static_cast<float> (area.getX() + x);
+        const auto drawX = static_cast<float> (area.getX() + x);
 
         if (x == 0)
             path.startNewSubPath (drawX, y);
@@ -166,14 +168,28 @@ void PluginEditor::drawWaveformPreview (juce::Graphics& g, juce::Rectangle<int> 
             path.lineTo (drawX, y);
     }
 
-    g.setColour (juce::Colours::cyan);
-    g.strokePath (path, juce::PathStrokeType (2.0f));
+    return path;
+}
 
+void PluginEditor::drawWaveformInfoText (juce::Graphics& g, const juce::Rectangle<int> area) const
+{
     g.setColour (juce::Colours::lightgreen);
     g.setFont (13.0f);
     g.drawText (
-        "Freq: " + juce::String (processorRef.getFrequency(), 1) + " Hz    Gain: " + juce::String (processorRef.getGain(), 2),
+        "Freq: " + juce::String (processorRef.getFrequency(), 1)
+            + " Hz    Gain: " + juce::String (processorRef.getGain(), 2),
         area.reduced (10).removeFromBottom (24),
         juce::Justification::centredLeft,
         false);
+}
+
+void PluginEditor::drawWaveformPreview (juce::Graphics& g, const juce::Rectangle<int> area) const
+{
+    drawWaveformBackground (g, area);
+
+    const float amplitude = static_cast<float> (area.getHeight()) * 0.35f * processorRef.getGain();
+    g.setColour (juce::Colours::cyan);
+    g.strokePath (buildWaveformPath (area, amplitude), juce::PathStrokeType (2.0f));
+
+    drawWaveformInfoText (g, area);
 }
